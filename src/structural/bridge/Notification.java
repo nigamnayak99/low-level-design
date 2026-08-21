@@ -1,7 +1,7 @@
 package structural.bridge;
 
 
-//Abstraction
+//1. Abstraction : Defines the high-level functionality that the client uses.
 public abstract class Notification {
 
     NotificationSender notificationSender;
