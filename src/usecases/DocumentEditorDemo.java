@@ -1,9 +1,10 @@
 package usecases;
 
 
-import javax.print.Doc;
-import java.util.ArrayList;
-import java.util.List;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.*;
 
 interface DocumentElement {
     String render();
@@ -54,6 +55,36 @@ class NewLine implements DocumentElement {
     }
 }
 
+interface DocumentStorage {
+    String save(String fileName, String content) throws IOException;
+}
+
+class FileSystemStorage implements DocumentStorage {
+
+    private final Path directory;
+
+    FileSystemStorage(Path directory) {
+        this.directory = Objects.requireNonNull(directory);
+    }
+
+    @Override
+    public String save(String fileName, String content) throws IOException {
+        Files.createDirectories(directory);
+        return Files.writeString(directory.resolve(fileName), content).toString();
+    }
+}
+
+class InMemoryStorage implements DocumentStorage {
+    private final Map<String, String> store = new HashMap<>();
+
+    @Override public String save(String name, String content) {
+        store.put(name, content); return "memory:" + name;
+    }
+    String read(String name) {
+        return store.get(name);
+    }
+}
+
 class Document {
     private final String title;
     private final List<DocumentElement> documentElementList;
@@ -92,9 +123,11 @@ class Document {
 
 class DocumentEditor {
     private final Document document;
+    private final DocumentStorage documentStorage;
 
-    DocumentEditor(Document document) {
+    DocumentEditor(Document document, DocumentStorage documentStorage) {
         this.document = document;
+        this.documentStorage = documentStorage;
     }
 
     public void addText(String text){
@@ -117,18 +150,24 @@ class DocumentEditor {
         return document.render();
     }
 
+    public String save() throws IOException {
+        String name = document.getTitle().replaceAll("\\s+", "_") + ".txt";
+        return documentStorage.save(name, document.render());
+    }
+
 }
 
 
 class DocumentEditorDemo {
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException {
         Document document = new Document("A Simple Document", null);
-        DocumentEditor documentEditor = new DocumentEditor(document);
+        DocumentEditor documentEditor = new DocumentEditor(document, new FileSystemStorage(Path.of("out")));
         documentEditor.addImage("C://Nigam/Home/Nigam_nayak.png", "Nigam's Photo");
         documentEditor.newLine();
         documentEditor.addText("Nigam");
         documentEditor.space();
         documentEditor.addText("Nayak");
         IO.println(documentEditor.render());
+        documentEditor.save();
     }
 }
